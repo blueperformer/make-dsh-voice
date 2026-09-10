@@ -5,7 +5,12 @@
  * otherwise surface only as a missing settings page with nothing in the console.
  * This script executes the real emitted bundle against fake browser globals and
  * asserts what `apply` actually did, then exercises the host half's pure logic
- * (the settings schema and the audio store).
+ * (the audio store and the command line it hands the shell service).
+ *
+ * Only the settings-schema group needs the harness' own packages, which are
+ * resolved from a DSH installation. Where none exists — a CI runner — that group
+ * reports `skip` and names the anchor it looked under, rather than failing for a
+ * reason that says nothing about this plugin.
  *
  * Usage: node verify.mjs
  */
@@ -27,6 +32,17 @@ let failures = 0
 function check(label, ok, detail) {
   console.log(`${ok ? '  ok  ' : ' FAIL '} ${label}${detail === undefined ? '' : ` — ${detail}`}`)
   if (!ok) failures += 1
+}
+
+/**
+ * Record a group of assertions that could not run here.
+ *
+ * Deliberately not a pass: a check that tested nothing must never look green.
+ * @param label - what was skipped.
+ * @param why - why it could not run.
+ */
+function skip(label, why) {
+  console.log(` skip  ${label} — ${why}`)
 }
 
 /** The fakes stay installed for the whole run: the bundle reads `document` at call time. */
@@ -276,19 +292,34 @@ check('disarmed after the stored false arrived', late.listeners.filter(e => e.re
 restoreFakes()
 
 console.log('\nhost half: settings schema')
-const { loadHarnessModule } = await import(pathToFileURL(join(HERE, 'host', 'harness.js')).href)
-const schemastery = await loadHarnessModule('@deepseek-ai/schemastery')
+const { loadHarnessModule, harnessAnchor } = await import(pathToFileURL(join(HERE, 'host', 'harness.js')).href)
 const { voiceSettingsSchema, VOICE_NAMESPACE } = await import(pathToFileURL(join(HERE, 'host', 'settings.js')).href)
-const { redactSecrets } = await loadHarnessModule('@deepseek-ai/dsh-settings')
-const z = schemastery.default ?? schemastery
-const schema = voiceSettingsSchema(z)
-check('namespace is "voice"', VOICE_NAMESPACE === 'voice', VOICE_NAMESPACE)
-const defaults = schema({})
-check('defaults are complete', defaults.model === 'cosyvoice-v3.5-plus' && defaults.reply === false
-  && defaults.length === 'short' && defaults.bootSound === true && defaults.outputDir === '', JSON.stringify(defaults))
-const redacted = redactSecrets(schema, { ...defaults, apiKey: 'sk-do-not-leak' })
-check('the API key never appears in a redacted value', JSON.stringify(redacted.value).includes('sk-do-not-leak') === false)
-check('redaction reports the key as set', redacted.secrets.some(s => s.path[0] === 'apiKey' && s.set === true), JSON.stringify(redacted.secrets))
+// The schema and its secret redaction are implemented by the harness' own
+// packages, so these checks need a DSH installation to resolve them from. A CI
+// runner has none, and failing there would say nothing about this plugin — the
+// schema is exercised for real the moment the plugin mounts. Skipping is
+// explicit rather than silent, and never counts as a pass.
+let schemastery
+let redactSecrets
+try {
+  const mod = await loadHarnessModule('@deepseek-ai/schemastery')
+  schemastery = mod.default ?? mod
+  redactSecrets = (await loadHarnessModule('@deepseek-ai/dsh-settings')).redactSecrets
+} catch (error) {
+  schemastery = undefined
+}
+if (schemastery === undefined || typeof redactSecrets !== 'function') {
+  skip('schema defaults and key redaction', `no DSH installation resolvable from ${harnessAnchor()}`)
+} else {
+  const schema = voiceSettingsSchema(schemastery)
+  check('namespace is "voice"', VOICE_NAMESPACE === 'voice', VOICE_NAMESPACE)
+  const defaults = schema({})
+  check('defaults are complete', defaults.model === 'cosyvoice-v3.5-plus' && defaults.reply === false
+    && defaults.length === 'short' && defaults.bootSound === true && defaults.outputDir === '', JSON.stringify(defaults))
+  const redacted = redactSecrets(schema, { ...defaults, apiKey: 'sk-do-not-leak' })
+  check('the API key never appears in a redacted value', JSON.stringify(redacted.value).includes('sk-do-not-leak') === false)
+  check('redaction reports the key as set', redacted.secrets.some(s => s.path[0] === 'apiKey' && s.set === true), JSON.stringify(redacted.secrets))
+}
 
 console.log('\nhost half: audio store')
 const { AudioStore, clipStamp, resolveOutputDir } = await import(pathToFileURL(join(HERE, 'host', 'synth.js')).href)
