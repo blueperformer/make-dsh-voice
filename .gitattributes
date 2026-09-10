@@ -1,0 +1,13 @@
+# Normalize every text file to LF, in the repository and in every checkout.
+#
+# This repository commits a generated artifact (lib/client.js) and CI asserts it
+# matches a fresh build with `git diff --exit-code`. Byte-stability across
+# platforms is what makes that check mean anything, and Git's core.autocrlf
+# default on Windows would otherwise rewrite line endings on checkout.
+* text=auto eol=lf
+
+# Binary assets must never be text-converted.
+*.mp3 binary
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # verify.mjs executes lib/client.js against fake browser globals and
+      # exercises the host half's pure logic, so it asserts the shipped
+      # artifact's real behavior rather than the sources it came from.
+      - name: behavior checks
+        run: node verify.mjs
+
+      # The generated bundle is committed, so a source edit that was never
+      # rebuilt would otherwise ship stale behavior. build.mjs emits only
+      # relative paths and escapes non-ASCII, so a fresh build is byte-identical
+      # on any machine — which is what makes this diff meaningful.
+      - name: committed bundle is up to date
+        run: |
+          node build.mjs
+          git diff --exit-code -- lib/client.js
+
+      - name: python syntax
+        run: python3 -m py_compile synthesize.py

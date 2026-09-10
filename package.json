@@ -1,0 +1,61 @@
+{
+  "name": "dsh-voice",
+  "version": "1.0.0",
+  "description": "Voice for DeepSeek Harness: an AI voice-reply tool, a persistent voice bar, a Voice settings page, and a boot sound module — all backed by Alibaba Cloud Bailian TTS.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blueperformer/make-dsh-voice.git"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "voice",
+    "tts",
+    "boot-sound"
+  ],
+  "main": "host/index.js",
+  "files": [
+    "host",
+    "client",
+    "lib",
+    "assets",
+    "synthesize.py",
+    "cordis.patch.yml",
+    "build.mjs",
+    "verify.mjs",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "default": "./host/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "verify": "node verify.mjs",
+    "test": "node build.mjs && node verify.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ],
+      "immediately": false
+    }
+  }
+}

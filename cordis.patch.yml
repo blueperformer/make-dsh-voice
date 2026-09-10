@@ -1,0 +1,19 @@
+# dsh-voice's own composition layer.
+#
+# Declared as this package's `dsh.bundle.patch`, so
+# `dsh plugin --profile <name> add <this package>` is a complete install: the CLI
+# sees a dependency declaring `dsh.bundle` and appends the package to the
+# profile's `dsh.profile.bundles`, applying this layer with no hand-editing.
+#
+# Layer order is: every bundle in `dsh.profile.bundles`, then the profile's own
+# `cordis.patch.yml`, then any `--patch` overlay. The row below can therefore
+# still be disabled or overridden by id from the user's own patch layer:
+#
+#   - id: voice
+#     disabled: true
+#
+# `name` is this package's own name; the Loader's baseUrl is the profile
+# directory, whose node_modules holds the installed copy.
+- insert:
+    - id: voice
+      name: dsh-voice
