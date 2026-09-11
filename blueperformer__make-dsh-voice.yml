@@ -1,0 +1,6 @@
+url: https://github.com/blueperformer/make-dsh-voice
+name: blueperformer/make-dsh-voice
+category: voice
+description:
+  en: "Adds voice to the agent: a voice_speak tool, a play bar under the composer, a Voice settings page, and a toggleable boot sound. Synthesis runs on Alibaba Cloud Bailian cosyvoice models with your own enrolled voice."
+  zh: "给 AI 加上语音：voice_speak 工具、输入框下方的语音条、语音设置页，以及可开关的开机提示音。合成走阿里云百炼的 cosyvoice 模型，使用你自己注册的复刻音色。"
